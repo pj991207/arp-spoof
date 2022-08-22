@@ -30,7 +30,8 @@ struct ARP_TABLE
 	Ip ip_a;
 };
 //Mac Address를 가져오는 함수
-int Mac_Address_(unsigned char* mac,char * ip,const char * interface);
+int Mac_Address_(unsigned char* mac,const char * interface);
+uint32_t IP_Address_(const char * interface);
 void usage();
 Mac find_mac_address(Ip ip, pcap_t* handle, char* dev, Mac My_Mac_Address, Ip My_Ip_Address);
 void sender_arp_attack(list<ARP_TABLE> &arp_list,pcap_t* handle);
@@ -52,8 +53,9 @@ int main(int argc, char* argv[]) {
     char * dev = argv[1];
     //나의 MAC , IP 입력
 	unsigned char mac_[6];
-	char ip_[40];
-	Mac_Address_(mac_,ip_,dev);
+	uint32_t  ip_;
+	Mac_Address_(mac_,dev);
+    ip_ = IP_Address_(dev);
     Mac My_Mac_Address_ = Mac(mac_);
     ARP_TABLE temp;
 	temp.mac_a = My_Mac_Address_;
@@ -238,18 +240,18 @@ void relay_sender_to_target(list<ARP_TABLE>&arp_list,u_char * packet, pcap_t*han
     u_char * copy_packet = NULL;
     copy_packet = packet;
     ethHdr_ = (struct EthHdr *)copy_packet;
-    printf("\n\n\n\n");
-    std::cout << std::string(ethHdr_->smac()) << std::endl;
-    std::cout << std::string(ethHdr_->dmac()) << std::endl;
+    //printf("\n\n\n\n");
+    //std::cout << std::string(ethHdr_->smac()) << std::endl;
+    //std::cout << std::string(ethHdr_->dmac()) << std::endl;
 
-    std::cout << std::string(sender_address.mac_a) << std::endl;
-    std::cout << std::string(my_address.mac_a) << std::endl;
+    //std::cout << std::string(sender_address.mac_a) << std::endl;
+    //std::cout << std::string(my_address.mac_a) << std::endl;
     ethHdr_->smac_ = my_address.mac_a;
     ethHdr_->dmac_ = target_address.mac_a;
 
-    std::cout << std::string(ethHdr_->smac()) << std::endl;
-    std::cout << std::string(ethHdr_->dmac()) << std::endl;
-    printf("\n\n\n\n");
+    //std::cout << std::string(ethHdr_->smac()) << std::endl;
+    //std::cout << std::string(ethHdr_->dmac()) << std::endl;
+    //printf("\n\n\n\n");
     int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(copy_packet), length);
 
     if (res != 0) {
@@ -328,9 +330,32 @@ void target_arp_attack(list<ARP_TABLE> &arp_list,pcap_t* handle)
         }
     }
 }
+uint32_t IP_Address_(const char * interface){
+    int fd_;
+    uint32_t ip_=0;
+    unsigned char ip[4];
+    struct ifreq ifr_;
+    struct sockaddr_in * sock_in;
+    fd_=socket(AF_INET,SOCK_DGRAM,0);
+    strcpy(ifr_.ifr_name,interface);
+    if(ioctl(fd_,SIOCGIFADDR,&ifr_)<0){
+        perror("IOCTL ERROR \n");
+        return -1;
+    }
+    sock_in = (struct sockaddr_in *)&ifr_.ifr_addr;
+    memcpy(ip,(void*)&sock_in->sin_addr,sizeof(sock_in->sin_addr));
 
+    for(int i = 0; i<4;i++)
+    {
+        ip_+=(ip[i]<<(8*i));
+    }
+
+    close(fd_);
+
+    return ip_;
+}
 //Mac Address를 가져오는 함수
-int Mac_Address_(unsigned char* mac,char * ip,const char * interface)
+int Mac_Address_(unsigned char* mac,const char * interface)
 {
     int sock_;//소켓 디스크립터 변수
     struct ifreq ifr_; //ifreq구조체 변수
@@ -363,7 +388,6 @@ int Mac_Address_(unsigned char* mac,char * ip,const char * interface)
     mac[4] = (unsigned)my_mac_[4];
     mac[5] = (unsigned)my_mac_[5];
 
-	inet_ntop(AF_INET,ifr_.ifr_addr.sa_data+2,ip,sizeof(struct sockaddr));
     close(sock_);
     return 0;
 }

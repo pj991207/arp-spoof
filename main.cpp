@@ -238,18 +238,18 @@ void relay_sender_to_target(list<ARP_TABLE>&arp_list,u_char * packet, pcap_t*han
     u_char * copy_packet = NULL;
     copy_packet = packet;
     ethHdr_ = (struct EthHdr *)copy_packet;
-    printf("\n\n\n\n");
-    std::cout << std::string(ethHdr_->smac()) << std::endl;
-    std::cout << std::string(ethHdr_->dmac()) << std::endl;
+    //printf("\n\n\n\n");
+    //std::cout << std::string(ethHdr_->smac()) << std::endl;
+    //std::cout << std::string(ethHdr_->dmac()) << std::endl;
 
-    std::cout << std::string(sender_address.mac_a) << std::endl;
-    std::cout << std::string(my_address.mac_a) << std::endl;
+    //std::cout << std::string(sender_address.mac_a) << std::endl;
+    //std::cout << std::string(my_address.mac_a) << std::endl;
     ethHdr_->smac_ = my_address.mac_a;
     ethHdr_->dmac_ = target_address.mac_a;
 
-    std::cout << std::string(ethHdr_->smac()) << std::endl;
-    std::cout << std::string(ethHdr_->dmac()) << std::endl;
-    printf("\n\n\n\n");
+    //std::cout << std::string(ethHdr_->smac()) << std::endl;
+    //std::cout << std::string(ethHdr_->dmac()) << std::endl;
+    //printf("\n\n\n\n");
     int res = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(copy_packet), length);
 
     if (res != 0) {
